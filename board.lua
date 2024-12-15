@@ -29,11 +29,11 @@ function Board.create(size)
 end
 
 ---@param data BoardData
-function Board:fromData(data)
+function Board.fromData(data)
 	local instance = setmetatable({
 		gridXCount = #data[1],
 		gridYCount = #data,
-	}, self)
+	}, Board)
 	---@diagnostic disable-next-line: inject-field
 	instance.data = data
 	return instance
@@ -42,7 +42,11 @@ end
 ---@function
 ---@param opts { x: number, y: number, active: boolean }
 function Board:set(opts)
-	self.data[opts.y][opts.x] = opts.active
+	if 1 < opts.x and opts.x < self.gridXCount then
+		if 1 < opts.y and opts.y < self.gridYCount then
+			self.data[opts.y][opts.x] = opts.active
+		end
+	end
 end
 
 ---@return boolean
@@ -86,6 +90,20 @@ function Board:next()
 		end
 	end
 	self.data = nextGrid
+end
+
+---@return string
+function Board:toString()
+	local result = { "{" }
+	for _, row in ipairs(self.data) do
+		table.insert(result, "{")
+		for _, value in ipairs(row) do
+			table.insert(result, tostring(value) .. ",")
+		end
+		table.insert(result, "},")
+	end
+	table.insert(result, "}")
+	return table.concat(result, "")
 end
 
 return Board

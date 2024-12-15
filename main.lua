@@ -1,3 +1,5 @@
+local socket = require("socket")
+
 local consts = require("consts")
 local state = require("state")
 
@@ -9,6 +11,22 @@ local history = History.create()
 
 local Ticker = require("ticker")
 local ticker = Ticker.create(consts.initialDelay)
+
+local Dialog = require("dialog")
+
+local saveDialog = Dialog.create("Write file name", function(filename)
+	local dir = os.getenv("HOME") .. "/Documents/Life/"
+	love.filesystem.createDirectory(dir)
+	local path = dir .. filename .. ".txt"
+	local data = board:toString()
+	local file, err = io.open(path, "w")
+	if not file then
+		print("Error opening file: " .. err)
+		return
+	end
+	file:write(data)
+	file:close()
+end)
 
 local fieldWidth = consts.gridXCount * consts.cellSize
 local fieldHeight = consts.gridYCount * consts.cellSize
@@ -60,9 +78,21 @@ function love.update()
 	end)
 end
 
+---@param text string
+function love.textinput(text)
+	saveDialog:textinput(text)
+end
+
 ---@param key string
 function love.keypressed(key)
 	state.lastKey = key
+	saveDialog:keypressed(key)
+	if saveDialog.isOpen then
+		return
+	end
+	if key == "s" then
+		saveDialog:open()
+	end
 	if key == "space" then
 		state.isPlaying = not state.isPlaying
 	end
@@ -79,7 +109,7 @@ function love.keypressed(key)
 		if key == "left" then
 			local prev = history:prev()
 			if prev ~= nil then
-				board = Board:fromData(prev)
+				board = Board.fromData(prev)
 				state.iteration = state.iteration - 1
 			end
 		end
@@ -87,7 +117,7 @@ function love.keypressed(key)
 			local next = history:next()
 			if next ~= nil then
 				state.iteration = state.iteration + 1
-				board = Board:fromData(next)
+				board = Board.fromData(next)
 			end
 		end
 	end
@@ -97,17 +127,38 @@ function love.keypressed(key)
 	end
 end
 
+function love.filedropped(file)
+	file:open("r")
+	local content = file:read()
+	board:clear()
+	history:clear()
+	local func = load("return" .. content)
+	if func == nil then
+		return
+	end
+	---@type table
+	local data = func()
+	if data == nil then
+		return
+	end
+	board = Board.fromData(data)
+	state:clear()
+end
+
 function love.draw()
+	love.graphics.setColor(0.855, 0.843, 0.804)
+	love.graphics.rectangle("fill", 0, 0, consts.windowWidth, consts.windowHeight)
 	board:iter(function(opts)
-		love.graphics.setColor(0.86, 0.86, 0.86)
+		love.graphics.setColor(0.776, 0.675, 0.561)
 		if board:get(opts) then
-			love.graphics.setColor(1, 0, 1)
+			love.graphics.setColor(0.345, 0.506, 0.341)
 		end
 
 		local rectangleX = fieldX + (opts.x - 1) * consts.cellSize
 		local rectangleY = fieldY + (opts.y - 1) * consts.cellSize
-		love.graphics.rectangle("line", rectangleX, rectangleY, consts.cellDrawSize, consts.cellDrawSize)
+		love.graphics.rectangle("fill", rectangleX, rectangleY, consts.cellDrawSize, consts.cellDrawSize)
 	end)
 	love.graphics.setColor(0, 0, 0)
 	love.graphics.print(getDebugMessage())
+	saveDialog:draw()
 end

@@ -1,7 +1,7 @@
 local M = {
 	cellSize = 9,
 
-	cellDrawSize = 9 - 1,
+	cellDrawSize = 9 - 3,
 	gridXCount = 80,
 	gridYCount = 80,
 
